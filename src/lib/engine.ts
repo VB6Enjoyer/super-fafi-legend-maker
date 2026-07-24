@@ -1,6 +1,6 @@
 // Math & Simulation Engine
 
-export type Position = 'ST' | 'LW' | 'RW' | 'CAM' | 'CM' | 'CDM' | 'CB' | 'LB' | 'RB' | 'GK';
+export type Position = 'ST' | 'CF' | 'LW' | 'RW' | 'AMF' | 'RMF' | 'LMF' | 'CM' | 'DMF' | 'CB' | 'LB' | 'RB' | 'GK';
 
 // 1. Valuation Formula
 export function calculatePlayerValue(rating: number, age: number): number {
@@ -126,14 +126,14 @@ export function simulateSeasonStats(
       goalsConceded: Math.max(0, Math.round((35 / P) * appearanceRatio + ((Math.random() * 10) - 5))), // Inverse relation to P
       saves: getStat(100)
     };
-  } else if (position === 'ST' || position === 'LW' || position === 'RW') {
+  } else if (position === 'ST' || position === 'CF' || position === 'LW' || position === 'RW') {
      const isWinger = position === 'LW' || position === 'RW';
      return {
         goals: getStat(isWinger ? 9 : 15),
         assists: getStat(isWinger ? 9 : 4)
      }
-  } else if (position === 'CAM' || position === 'CM' || position === 'CDM') {
-     const isAttacking = position === 'CAM';
+  } else if (position === 'AMF' || position === 'LMF' || position === 'RMF' || position === 'CM' || position === 'DMF') {
+     const isAttacking = position === 'AMF' || position === 'LMF' || position === 'RMF';
      return {
         goals: getStat(isAttacking ? 9 : 3),
         assists: getStat(isAttacking ? 9 : 6)
