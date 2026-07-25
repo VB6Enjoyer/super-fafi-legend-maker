@@ -56,7 +56,7 @@ export const PlayerCreation = () => {
 
   return (
     <div className="max-w-2xl mx-auto mt-10 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-white">Create Your Legend</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white dark:text-white">Create Your Legend</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
@@ -122,7 +122,7 @@ export const PlayerCreation = () => {
                             className={`absolute -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full text-xs font-bold transition-all shadow-md ${
                                 position === pos.id
                                 ? 'bg-indigo-600 text-white border-2 border-white scale-110 z-10'
-                                : 'bg-white/90 text-gray-800 hover:bg-white border border-gray-300'
+                                : 'bg-white/90 text-gray-900 dark:text-white hover:bg-white border border-gray-300'
                             }`}
                             style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                             title={pos.label}

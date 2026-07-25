@@ -11,7 +11,6 @@ export const CareerDashboard = () => {
 
   if (!player) return null;
 
-  // Show transfer window immediately if player is a Free Agent (e.g. just created)
   if (player.currentTeam?.name === 'Free Agent' && !showTransfers && player.age === 16 && player.statsHistory.length === 0) {
       setTimeout(() => setShowTransfers(true), 100);
   }
@@ -19,7 +18,6 @@ export const CareerDashboard = () => {
   const handleSimulateSeason = async (riskChoice: 'safe' | 'risky') => {
     setIsSimulating(true);
 
-    // 1. Calculate stats based on choice
     const formOffset = riskChoice === 'risky' ? (Math.random() > 0.5 ? 2 : -2) : 0;
 
     const apps = calculateAppearances(player.age, player.overallRating);
@@ -42,7 +40,6 @@ export const CareerDashboard = () => {
 
     addSeasonStats(seasonStats);
 
-    // 2. Progression
     const ratingChange = calculateYearlyProgression(player.age, player.overallRating, player.peakRating, formOffset);
 
     await new Promise(r => setTimeout(r, 1000));
@@ -54,7 +51,6 @@ export const CareerDashboard = () => {
 
     setIsSimulating(false);
 
-    // Forced retirement check
     if (player.age + 1 >= 40 && player.position !== 'GK') {
         retirePlayer();
         return;
@@ -64,11 +60,19 @@ export const CareerDashboard = () => {
         return;
     }
 
-    // Trigger Transfer Window at end of season (if not retiring)
     setShowTransfers(true);
   };
 
   const isGK = player.position === 'GK';
+
+  const getOvrColorClass = (rating: number) => {
+      if (rating < 60) return 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700';
+      if (rating < 70) return 'bg-gradient-to-br from-amber-600 to-orange-800 text-white border-amber-900 shadow-[0_0_15px_rgba(217,119,6,0.5)]'; // Bronze
+      if (rating < 80) return 'bg-gradient-to-br from-gray-300 to-gray-500 text-gray-900 border-gray-400 shadow-[0_0_15px_rgba(156,163,175,0.5)]'; // Silver
+      if (rating < 90) return 'bg-gradient-to-br from-yellow-300 to-yellow-600 text-yellow-900 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.6)]'; // Gold
+      if (rating < 95) return 'bg-gradient-to-br from-blue-100 to-indigo-200 text-indigo-900 border-indigo-300 shadow-[0_0_20px_rgba(199,210,254,0.8)]'; // Platinum
+      return 'bg-gradient-to-br from-cyan-300 via-blue-400 to-purple-500 text-white border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.8)]'; // Diamond
+  };
 
   return (
     <div className="max-w-4xl mx-auto mt-8 p-6 bg-gray-50 dark:bg-gray-900 rounded-lg shadow-md">
@@ -78,15 +82,15 @@ export const CareerDashboard = () => {
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex justify-between items-center">
         <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{player.name}</h1>
-            <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500">{player.nationality} • {player.position} • {player.currentTeam?.name}</p>
+            <p className="text-gray-500 dark:text-gray-400">{player.nationality} • {player.position} • {player.currentTeam?.name}</p>
         </div>
         <div className="flex gap-4 text-center">
-            <div className="bg-indigo-50 dark:bg-indigo-900/50 p-3 rounded-lg min-w-[80px]">
-                <div className="text-sm text-indigo-600 font-semibold">OVR</div>
-                <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{player.overallRating}</div>
+            <div className={`p-3 rounded-lg min-w-[80px] border ${getOvrColorClass(player.overallRating)} transition-all duration-500`}>
+                <div className="text-sm font-semibold opacity-80">OVR</div>
+                <div className="text-3xl font-black">{player.overallRating}</div>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 dark:bg-blue-900/50 p-3 rounded-lg min-w-[80px]">
-                <div className="text-sm text-blue-600 font-semibold">AGE</div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg min-w-[80px]">
+                <div className="text-sm text-blue-600 dark:text-blue-400 font-semibold">AGE</div>
                 <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{player.age}</div>
             </div>
         </div>
@@ -96,32 +100,32 @@ export const CareerDashboard = () => {
           {/* Left Column - Stats & History */}
           <div className="space-y-6">
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Trophy size={20} className="text-yellow-500"/> Career Overview</h3>
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100"><Trophy size={20} className="text-yellow-500"/> Career Overview</h3>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">Career Earnings</div>
-                        <div className="font-semibold flex items-center"><Euro size={14} className="mr-1"/>{player.careerEarnings.toLocaleString()}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Career Earnings</div>
+                        <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center"><Euro size={14} className="mr-1"/>{player.careerEarnings.toLocaleString()}</div>
                     </div>
                     <div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">Current Wage</div>
-                        <div className="font-semibold flex items-center"><Euro size={14} className="mr-1"/>{player.weeklyWage.toLocaleString()}/wk</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Current Wage</div>
+                        <div className="font-semibold text-gray-900 dark:text-gray-100 flex items-center"><Euro size={14} className="mr-1"/>{player.weeklyWage.toLocaleString()}/wk</div>
                     </div>
                     <div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">Trophies</div>
-                        <div className="font-semibold">{player.trophies.length}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Trophies</div>
+                        <div className="font-semibold text-gray-900 dark:text-gray-100">{player.trophies.length}</div>
                     </div>
                 </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 max-h-[400px] overflow-y-auto">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Calendar size={20} className="text-blue-500"/> Season History</h3>
+                <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-gray-100"><Calendar size={20} className="text-blue-500"/> Season History</h3>
                 {player.statsHistory.length === 0 ? (
                     <p className="text-gray-400 dark:text-gray-500 italic">No professional appearances yet.</p>
                 ) : (
                     <div className="space-y-4">
                         {[...player.statsHistory].reverse().map((stat, idx) => (
                             <div key={idx} className="border-b dark:border-gray-700 pb-2 last:border-0">
-                                <div className="flex justify-between text-sm font-semibold">
+                                <div className="flex justify-between text-sm font-semibold text-gray-900 dark:text-gray-100">
                                     <span>Age {16 + player.statsHistory.length - 1 - idx} • {stat.teamName}</span>
                                     <span>Apps: {stat.appearances}</span>
                                 </div>
@@ -146,7 +150,7 @@ export const CareerDashboard = () => {
 
           {/* Right Column - Action Area */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-             <h3 className="text-lg font-bold mb-4 text-center">Season Progression</h3>
+             <h3 className="text-lg font-bold mb-4 text-center text-gray-900 dark:text-gray-100">Season Progression</h3>
 
              {player.isRetired ? (
                  <div className="text-center p-6 bg-gray-100 dark:bg-gray-800 rounded-lg">
@@ -159,7 +163,7 @@ export const CareerDashboard = () => {
                      <button
                         onClick={() => handleSimulateSeason('safe')}
                         disabled={isSimulating}
-                        className="w-full py-3 px-4 border border-b dark:border-gray-700lue-600 text-blue-600 rounded-md shadow-sm text-sm font-medium hover:bg-blue-50 dark:bg-blue-900/20 dark:bg-blue-900/50 focus:outline-none disabled:opacity-50"
+                        className="w-full py-3 px-4 border border-blue-600 text-blue-600 dark:text-blue-400 rounded-md shadow-sm text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none disabled:opacity-50"
                      >
                         {isSimulating ? 'Simulating...' : 'Play it Safe (Steady Growth)'}
                      </button>

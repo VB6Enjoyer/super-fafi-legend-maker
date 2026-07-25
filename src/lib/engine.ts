@@ -152,66 +152,100 @@ import type { Team } from '../store/careerStore';
 export interface TransferOffer {
     team: Team;
     wageOffer: number;
-    isCurrentTeam?: boolean;
+}
+
+export interface TransferWindowResult {
+    externalOffers: TransferOffer[];
+    renewalOffer: TransferOffer | null;
+    releaseReason: string | null;
 }
 
 export function generateTransferOffers(
     playerRating: number,
     playerAge: number,
     currentTeam: Team | null,
-    allTeams: Team[]
-): TransferOffer[] {
+    allTeams: Team[],
+    lastSeasonAvgRating: number = 6.5
+): TransferWindowResult {
     const playerValue = calculatePlayerValue(playerRating, playerAge);
-    const eligibleTeams = allTeams.filter(team => {
-        // Exclude current team from general pool, we will add it separately
-        if (currentTeam && team.id === currentTeam.id) return false;
 
-        // 1. Budget check
-        const maxBudget = calculateMaxBudget(team.elo_rating);
-        if (playerValue > maxBudget) return false;
+    // 1. Current Team Assessment
+    let renewalOffer: TransferOffer | null = null;
+    let releaseReason: string | null = null;
 
-        // 2. Rating floor check (unless young)
-        if (playerAge > 21 && playerRating < team.elo_rating - 10) return false;
+    if (currentTeam && currentTeam.name !== 'Free Agent') {
+        const teamBudget = calculateMaxBudget(currentTeam.elo_rating);
 
-        return true;
-    });
-
-    // Determine weight for eligible teams
-    const weightedTeams = eligibleTeams.map(team => {
-        let weight = 1.0;
-
-        // Tier logic
-        if (currentTeam && currentTeam.league_tier && team.league_tier) {
-            const diff = Math.abs(currentTeam.league_tier - team.league_tier);
-            if (diff === 0) weight *= 1.0;
-            else if (diff === 1) weight *= 0.35;
-            else weight *= 0.05;
+        if (playerValue > teamBudget * 1.5) {
+            // Player is way too expensive for the club now
+            releaseReason = "The club can no longer afford your salary demands due to your high valuation.";
+        } else if (lastSeasonAvgRating < 5.5 && Math.random() > 0.3) {
+            // Poor performance release
+            releaseReason = "The club decided not to renew your contract following poor performances last season.";
+        } else {
+            // Offer renewal
+            renewalOffer = {
+                team: currentTeam,
+                wageOffer: Math.round(1000 + (currentTeam.elo_rating * 100) + (playerRating * 210))
+            };
         }
-
-        return { team, weight };
-    });
-
-    // Pick top 3-4 random offers based on weights (simplified for prototype)
-    const sorted = weightedTeams.sort(() => Math.random() - 0.5); // Random shuffle
-    const selected = sorted.slice(0, 3).map(w => w.team);
-
-    const offers: TransferOffer[] = selected.map(team => {
-        // Wage is loosely based on team elo and player rating
-        const baseWage = 1000 + (team.elo_rating * 100) + (playerRating * 200);
-        return {
-            team,
-            wageOffer: Math.round(baseWage * (0.8 + Math.random() * 0.4))
-        };
-    });
-
-    // Always offer renewal if not completely terrible
-    if (currentTeam && playerRating >= currentTeam.elo_rating - 15) {
-        offers.unshift({
-            team: currentTeam,
-            wageOffer: Math.round(1000 + (currentTeam.elo_rating * 100) + (playerRating * 210)),
-            isCurrentTeam: true
-        });
     }
 
-    return offers.sort((a, b) => b.wageOffer - a.wageOffer);
+    // 2. RNG "Quiet Window" (No external offers)
+    // 30% chance of no offers, but only if they have a renewal offer (don't soft-lock free agents)
+    const isQuietWindow = renewalOffer !== null && Math.random() < 0.3;
+
+    let externalOffers: TransferOffer[] = [];
+
+    if (!isQuietWindow) {
+        const eligibleTeams = allTeams.filter(team => {
+            // Exclude current team from external offers
+            if (currentTeam && team.id === currentTeam.id) return false;
+
+            // 1. Budget check
+            const maxBudget = calculateMaxBudget(team.elo_rating);
+            if (playerValue > maxBudget) return false;
+
+            // 2. Rating floor check (unless young)
+            if (playerAge > 21 && playerRating < team.elo_rating - 10) return false;
+
+            return true;
+        });
+
+        // Determine weight for eligible teams
+        const weightedTeams = eligibleTeams.map(team => {
+            let weight = 1.0;
+
+            // Tier logic
+            if (currentTeam && currentTeam.league_tier && team.league_tier) {
+                const diff = Math.abs(currentTeam.league_tier - team.league_tier);
+                if (diff === 0) weight *= 1.0;
+                else if (diff === 1) weight *= 0.35;
+                else weight *= 0.05;
+            }
+
+            return { team, weight };
+        });
+
+        // Pick top 2-3 random offers based on weights
+        const sorted = weightedTeams.sort(() => Math.random() - 0.5);
+        const selected = sorted.slice(0, Math.floor(Math.random() * 2) + 2).map(w => w.team);
+
+        externalOffers = selected.map(team => {
+            // Wage is loosely based on team elo and player rating
+            const baseWage = 1000 + (team.elo_rating * 100) + (playerRating * 200);
+            return {
+                team,
+                wageOffer: Math.round(baseWage * (0.8 + Math.random() * 0.4))
+            };
+        });
+
+        externalOffers.sort((a, b) => b.wageOffer - a.wageOffer);
+    }
+
+    return {
+        externalOffers,
+        renewalOffer,
+        releaseReason
+    };
 }
