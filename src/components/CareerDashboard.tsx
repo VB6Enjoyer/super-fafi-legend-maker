@@ -28,14 +28,28 @@ export const CareerDashboard = () => {
         trophies.push('Domestic League Title');
     }
 
+    const isFreeAgent = player.currentTeam?.name === 'Free Agent';
+
+    // Free agents don't play or earn
+    const actualApps = isFreeAgent ? 0 : apps;
+    const actualWageEarned = isFreeAgent ? 0 : player.weeklyWage * 52;
+    const actualStats = isFreeAgent ? {
+        goals: 0,
+        assists: 0,
+        cleanSheets: 0,
+        goalsConceded: 0,
+        saves: 0
+    } : stats;
+    const actualTrophies = isFreeAgent ? [] : trophies;
+
     const seasonStats: SeasonStats = {
       year: 2024 + player.age - 16,
       teamName: player.currentTeam?.name || 'Free Agent',
-      appearances: apps,
-      ...stats,
-      averageRating: 6.5 + (Math.random() * 2),
-      trophiesWon: trophies,
-      wageEarned: player.weeklyWage * 52
+      appearances: actualApps,
+      ...actualStats,
+      averageRating: isFreeAgent ? 0 : (6.5 + (Math.random() * 2)),
+      trophiesWon: actualTrophies,
+      wageEarned: actualWageEarned
     };
 
     addSeasonStats(seasonStats);
@@ -68,7 +82,7 @@ export const CareerDashboard = () => {
   const getOvrColorClass = (rating: number) => {
       if (rating < 60) return 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700';
       if (rating < 70) return 'bg-gradient-to-br from-amber-600 to-orange-800 text-white border-amber-900 shadow-[0_0_15px_rgba(217,119,6,0.5)]'; // Bronze
-      if (rating < 80) return 'bg-gradient-to-br from-gray-300 to-gray-500 text-gray-900 border-gray-400 shadow-[0_0_15px_rgba(156,163,175,0.5)]'; // Silver
+      if (rating < 80) return 'bg-gradient-to-br from-gray-300 to-gray-500 text-gray-900 dark:text-gray-100 border-gray-400 shadow-[0_0_15px_rgba(156,163,175,0.5)]'; // Silver
       if (rating < 90) return 'bg-gradient-to-br from-yellow-300 to-yellow-600 text-yellow-900 border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.6)]'; // Gold
       if (rating < 95) return 'bg-gradient-to-br from-blue-100 to-indigo-200 text-indigo-900 border-indigo-300 shadow-[0_0_20px_rgba(199,210,254,0.8)]'; // Platinum
       return 'bg-gradient-to-br from-cyan-300 via-blue-400 to-purple-500 text-white border-cyan-400 shadow-[0_0_25px_rgba(6,182,212,0.8)]'; // Diamond

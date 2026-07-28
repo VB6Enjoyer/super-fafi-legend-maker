@@ -31,7 +31,7 @@ export const PlayerCreation = () => {
       age: 16,
       overallRating: initialRating,
       currentTeam: {
-          id: 'test-uuid',
+          id: 'free-agent',
           name: 'Free Agent',
           elo_rating: 50
       }

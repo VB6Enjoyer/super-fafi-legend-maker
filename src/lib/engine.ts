@@ -202,12 +202,24 @@ export function generateTransferOffers(
             // Exclude current team from external offers
             if (currentTeam && team.id === currentTeam.id) return false;
 
+            // Exclude Free Agent dummy entries if any exist in the teams list
+            if (team.name === 'Free Agent' || team.id === 'free-agent') return false;
+
             // 1. Budget check
             const maxBudget = calculateMaxBudget(team.elo_rating);
             if (playerValue > maxBudget) return false;
 
-            // 2. Rating floor check (unless young)
-            if (playerAge > 21 && playerRating < team.elo_rating - 10) return false;
+            // 2. Rating floor check - stricter now to prevent min-rated players getting top 10 team offers
+            // If the team is way better than the player, they won't offer a contract.
+            // Young players get a bit of leeway (potential), but not much.
+            const ratingGap = team.elo_rating - playerRating;
+            if (playerAge <= 21) {
+                // Young prospect: max gap of 15 (e.g. 60 rated player can only go to 75 rated team)
+                if (ratingGap > 15) return false;
+            } else {
+                // Adult: max gap of 8
+                if (ratingGap > 8) return false;
+            }
 
             return true;
         });

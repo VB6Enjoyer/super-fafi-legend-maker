@@ -57,7 +57,7 @@ export const useCareerStore = create<CareerStore>((set) => ({
       statsHistory: [],
       trophies: [],
       careerEarnings: 0,
-      weeklyWage: 1000, // starting wage
+      weeklyWage: 0, // start with 0 until signed
       isRetired: false,
     }
   }),
