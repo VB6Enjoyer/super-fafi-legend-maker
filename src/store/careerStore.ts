@@ -45,6 +45,7 @@ interface CareerStore {
   updatePlayer: (updates: Partial<PlayerState>) => void;
   addSeasonStats: (stats: SeasonStats) => void;
   retirePlayer: () => void;
+  resetCareer: () => void;
 }
 
 export const useCareerStore = create<CareerStore>((set) => ({
@@ -83,5 +84,7 @@ export const useCareerStore = create<CareerStore>((set) => ({
 
   retirePlayer: () => set((state) => ({
     player: state.player ? { ...state.player, isRetired: true } : null
-  }))
+  })),
+
+  resetCareer: () => set({ player: null })
 }));

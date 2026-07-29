@@ -33,38 +33,50 @@ export function calculateYearlyProgression(
   const rand = Math.random();
 
   if (age <= 21) {
-    // Growth
+    // Early Growth
     change = Math.floor(Math.random() * 4) + 2; // +2 to +5
     if (formOffset > 0) change += 1;
     if (formOffset < 0) change -= 1;
   } else if (age >= 22 && age <= 28) {
-    // Volatile
-    const isVolatileJump = rand > 0.8;
-    if (isVolatileJump) {
-      change = Math.floor(Math.random() * 4) + 1; // +1 to +4
+    // Prime Growth (still improving)
+    // 60% chance of improving (1 to 3 points), 30% plateau (0), 10% slight regression (-1)
+    if (rand < 0.6) {
+      change = Math.floor(Math.random() * 3) + 1;
+    } else if (rand < 0.9) {
+      change = 0;
     } else {
-      change = Math.floor(Math.random() * 3) - 1; // -1 to +1
+      change = -1;
     }
     change += formOffset;
   } else if (age >= 29 && age <= 32) {
-    // Plateau or late bloomer
-    const isLateBloomer = rand > 0.9;
-    if (isLateBloomer) {
-      change = Math.floor(Math.random() * 3) + 1; // +1 to +3
+    // Late Prime / Plateau (can still improve, but less likely)
+    // 30% chance of improving (1 to 2), 50% plateau (0), 20% regression (-1)
+    if (rand < 0.3) {
+      change = Math.floor(Math.random() * 2) + 1;
+    } else if (rand < 0.8) {
+      change = 0;
     } else {
-      change = Math.floor(Math.random() * 2) - 1; // -1 to +0 (plateau or slight drop)
+      change = -1;
     }
     if (formOffset < 0) change -= 1;
+    if (formOffset > 0) change += (Math.random() > 0.5 ? 1 : 0);
   } else {
     // Decline based on peak
-    const peakFactor = Math.max(0, (99 - peakRating) / 40); // 99 peak = 0 factor (slowest decline). 59 peak = 1 factor (faster decline)
-    const baseDrop = Math.floor(Math.random() * 3) + 1; // 1 to 3
-    change = -(baseDrop + Math.floor(peakFactor * 2));
+    const peakFactor = Math.max(0, (99 - peakRating) / 40);
+    // Base drop is now randomized between 1 and 3, plus peak penalty
+    const baseDrop = Math.floor(Math.random() * 3) + 1;
+
+    // Allow a small chance to resist decline if form is great (vintage season)
+    if (formOffset > 0 && Math.random() > 0.7) {
+       change = 0;
+    } else {
+       change = -(baseDrop + Math.floor(peakFactor * 2));
+    }
   }
 
   // Cap ratings between 1 and 99
   const newRating = Math.max(1, Math.min(99, currentRating + change));
-  return newRating - currentRating; // return the diff
+  return newRating - currentRating;
 }
 
 // 4. Appearances

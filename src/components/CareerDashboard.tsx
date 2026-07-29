@@ -5,7 +5,7 @@ import { Trophy, Euro, Calendar } from 'lucide-react';
 import { TransferOffersModal } from './TransferOffersModal';
 
 export const CareerDashboard = () => {
-  const { player, updatePlayer, addSeasonStats, retirePlayer } = useCareerStore();
+  const { player, updatePlayer, addSeasonStats, retirePlayer, resetCareer } = useCareerStore();
   const [isSimulating, setIsSimulating] = useState(false);
   const [showTransfers, setShowTransfers] = useState(false);
 
@@ -168,8 +168,15 @@ export const CareerDashboard = () => {
 
              {player.isRetired ? (
                  <div className="text-center p-6 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                     <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">Happy Retirement!</h2>
-                     <p className="text-gray-600 dark:text-gray-300">You hung up your boots at age {player.age}.</p>
+                     <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Happy Retirement!</h2>
+                     <p className="text-gray-600 dark:text-gray-300 mb-6">You hung up your boots at age {player.age}.</p>
+
+                     <button
+                        onClick={() => resetCareer()}
+                        className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none transition-colors"
+                     >
+                        Play Again
+                     </button>
                  </div>
              ) : (
                  <div className="space-y-4 mt-8">
@@ -177,17 +184,27 @@ export const CareerDashboard = () => {
                      <button
                         onClick={() => handleSimulateSeason('safe')}
                         disabled={isSimulating}
-                        className="w-full py-3 px-4 border border-blue-600 text-blue-600 dark:text-blue-400 rounded-md shadow-sm text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none disabled:opacity-50"
+                        className="w-full py-3 px-4 border border-blue-600 text-blue-600 dark:text-blue-400 rounded-md shadow-sm text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:outline-none disabled:opacity-50 transition-colors"
                      >
                         {isSimulating ? 'Simulating...' : 'Play it Safe (Steady Growth)'}
                      </button>
                      <button
                         onClick={() => handleSimulateSeason('risky')}
                         disabled={isSimulating}
-                        className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:opacity-50"
+                        className="w-full py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none disabled:opacity-50 transition-colors"
                      >
                         {isSimulating ? 'Simulating...' : 'Show Off (High Risk/Reward)'}
                      </button>
+
+                     {player.age >= 30 && (
+                         <button
+                            onClick={() => retirePlayer()}
+                            disabled={isSimulating}
+                            className="w-full mt-6 py-3 px-4 border border-red-600 text-red-600 dark:text-red-400 rounded-md shadow-sm text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20 focus:outline-none disabled:opacity-50 transition-colors"
+                         >
+                            Retire Early
+                         </button>
+                     )}
                  </div>
              )}
           </div>

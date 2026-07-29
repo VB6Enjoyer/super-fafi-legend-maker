@@ -39,14 +39,14 @@ export const PlayerCreation = () => {
   };
 
   const positions: { id: Position; label: string; x: number; y: number }[] = [
-    { id: 'ST', label: 'ST', x: 50, y: 15 },
-    { id: 'CF', label: 'CF', x: 50, y: 25 },
+    { id: 'CF', label: 'CF', x: 50, y: 15 },
+    { id: 'ST', label: 'ST', x: 50, y: 25 },
     { id: 'LW', label: 'LW', x: 20, y: 20 },
     { id: 'RW', label: 'RW', x: 80, y: 20 },
     { id: 'AMF', label: 'AMF', x: 50, y: 35 },
-    { id: 'LMF', label: 'LMF', x: 15, y: 45 },
-    { id: 'RMF', label: 'RMF', x: 85, y: 45 },
-    { id: 'CM', label: 'CM', x: 50, y: 55 },
+    { id: 'LMF', label: 'LMF', x: 15, y: 50 },
+    { id: 'CM', label: 'CM', x: 50, y: 50 },
+    { id: 'RMF', label: 'RMF', x: 85, y: 50 },
     { id: 'DMF', label: 'DMF', x: 50, y: 65 },
     { id: 'LB', label: 'LB', x: 15, y: 75 },
     { id: 'RB', label: 'RB', x: 85, y: 75 },
@@ -122,7 +122,7 @@ export const PlayerCreation = () => {
                             className={`absolute -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full text-xs font-bold transition-all shadow-md ${
                                 position === pos.id
                                 ? 'bg-indigo-600 text-white border-2 border-white scale-110 z-10'
-                                : 'bg-white/90 text-gray-900 dark:text-white hover:bg-white border border-gray-300'
+                                : 'bg-white/90 text-gray-900 dark:text-gray-900 hover:bg-white border border-gray-300'
                             }`}
                             style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                             title={pos.label}
