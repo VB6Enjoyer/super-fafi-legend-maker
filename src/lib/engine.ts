@@ -1,5 +1,82 @@
 // Math & Simulation Engine
 
+export interface FameAndLoveStats {
+  love: number; // 0-100
+  fame: number; // 0-100
+  legacy: number; // hidden multiplier 0-100
+}
+
+export function calculateLoveAndFame(
+  currentLove: number,
+  currentFame: number,
+  currentLegacy: number,
+  _age: number,
+  overallRating: number,
+  teamElo: number,
+  changedClubs: boolean,
+  seasonPerformance: {
+     goals: number, assists: number, cleanSheets: number, saves: number, apps: number
+  },
+  trophiesWonCount: number
+): FameAndLoveStats {
+  let love = currentLove;
+  let fame = currentFame;
+  let legacy = currentLegacy;
+
+  if (changedClubs) {
+     love = 10; // Reset love at a new club
+  }
+
+  // --- LOVE CALCULATION ---
+  // Love goes up based on playing, scoring/saving, and winning titles.
+  const performanceScore = (seasonPerformance.goals * 2) + (seasonPerformance.assists * 1) + (seasonPerformance.cleanSheets * 3) + (seasonPerformance.saves * 0.1);
+  const playRatio = seasonPerformance.apps / 38; // rough ratio
+
+  let loveIncrease = 0;
+  if (playRatio > 0.5) loveIncrease += 5;
+  if (performanceScore > 20) loveIncrease += 5;
+  if (performanceScore > 40) loveIncrease += 10;
+  loveIncrease += (trophiesWonCount * 15);
+
+  if (playRatio < 0.2) loveIncrease -= 5; // Fans forget you if you don't play
+
+  love = Math.max(0, Math.min(100, love + loveIncrease));
+
+  // --- FAME & LEGACY CALCULATION ---
+  // Fame depends heavily on the club's stature (elo), the player's OVR, and titles.
+
+  // Calculate a "target fame" based on current situation
+  let targetFame = (overallRating * 0.6) + (teamElo * 0.4);
+  targetFame += (trophiesWonCount * 5);
+  if (performanceScore > 30) targetFame += 5;
+
+  // Legacy builds up when hitting very high fame at big clubs
+  if (fame > 80 && teamElo > 85) {
+      legacy += (fame - 80) * 0.5;
+      legacy = Math.min(100, legacy);
+  }
+
+  // Move current fame towards target fame
+  let fameDiff = targetFame - fame;
+
+  if (fameDiff < 0) {
+      // Losing fame (e.g. moved to a smaller club or getting old)
+      // Legacy protects against rapid fame loss
+      const protection = 1 - (legacy / 200); // legacy=100 means only lose half as fast
+      fameDiff *= protection;
+  }
+
+  // Smooth the transition (e.g. takes a few seasons to fully adjust)
+  fame = Math.max(0, Math.min(100, fame + (fameDiff * 0.4)));
+
+  return {
+      love: Math.round(love),
+      fame: Math.round(fame),
+      legacy
+  };
+}
+
+
 export type Position = 'ST' | 'CF' | 'LW' | 'RW' | 'AMF' | 'RMF' | 'LMF' | 'CM' | 'DMF' | 'CB' | 'LB' | 'RB' | 'GK';
 
 // 1. Valuation Formula
@@ -177,7 +254,8 @@ export function generateTransferOffers(
     playerAge: number,
     currentTeam: Team | null,
     allTeams: Team[],
-    lastSeasonAvgRating: number = 6.5
+    lastSeasonAvgRating: number = 6.5,
+    playerLove: number = 50
 ): TransferWindowResult {
     const playerValue = calculatePlayerValue(playerRating, playerAge);
 
@@ -188,17 +266,21 @@ export function generateTransferOffers(
     if (currentTeam && currentTeam.name !== 'Free Agent') {
         const teamBudget = calculateMaxBudget(currentTeam.elo_rating);
 
-        if (playerValue > teamBudget * 1.5) {
+        // Love impacts the tolerance for budget and poor performance
+        const budgetTolerance = 1.5 + (playerLove / 200); // 100 love -> 2.0x tolerance
+
+        if (playerValue > teamBudget * budgetTolerance) {
             // Player is way too expensive for the club now
             releaseReason = "The club can no longer afford your salary demands due to your high valuation.";
-        } else if (lastSeasonAvgRating < 5.5 && Math.random() > 0.3) {
-            // Poor performance release
+        } else if (lastSeasonAvgRating < 5.5 && Math.random() > (0.3 + (playerLove/200))) {
+            // Poor performance release. High love protects from this.
             releaseReason = "The club decided not to renew your contract following poor performances last season.";
         } else {
-            // Offer renewal
+            // Offer renewal. High love gives a wage boost (up to 20%)
+            const wageBoost = 1 + (playerLove / 500);
             renewalOffer = {
                 team: currentTeam,
-                wageOffer: Math.round(1000 + (currentTeam.elo_rating * 100) + (playerRating * 210))
+                wageOffer: Math.round((1000 + (currentTeam.elo_rating * 100) + (playerRating * 210)) * wageBoost)
             };
         }
     }

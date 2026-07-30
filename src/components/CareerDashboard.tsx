@@ -1,19 +1,27 @@
 import { useState } from 'react';
 import { useCareerStore, type SeasonStats } from '../store/careerStore';
-import { calculateAppearances, simulateSeasonStats, calculateYearlyProgression } from '../lib/engine';
-import { Trophy, Settings } from 'lucide-react';
+import { calculateAppearances, simulateSeasonStats, calculateYearlyProgression, calculateLoveAndFame, generateTransferOffers, type TransferWindowResult } from '../lib/engine';
+import { Trophy, Settings, Heart, Star } from 'lucide-react';
 import { TransferOffersModal } from './TransferOffersModal';
 import { COUNTRIES } from '../lib/countries';
+import { fetchTeams } from '../lib/supabase';
 
 export const CareerDashboard = () => {
   const { player, updatePlayer, addSeasonStats, retirePlayer, resetCareer } = useCareerStore();
   const [isSimulating, setIsSimulating] = useState(false);
   const [showTransfers, setShowTransfers] = useState(false);
+  const [transferResult, setTransferResult] = useState<TransferWindowResult | null>(null);
 
   if (!player) return null;
 
+  // Initialize Free Agent Transfer Window
   if (player.currentTeam?.name === 'Free Agent' && !showTransfers && player.age === 16 && player.statsHistory.length === 0) {
-      setTimeout(() => setShowTransfers(true), 100);
+      setTimeout(async () => {
+          const allTeams = await fetchTeams();
+          const generated = generateTransferOffers(player.overallRating, player.age, player.currentTeam, allTeams, 6.5, 50);
+          setTransferResult(generated);
+          setShowTransfers(true);
+      }, 100);
   }
 
   const handleSimulateSeason = async (riskChoice: 'safe' | 'risky') => {
@@ -44,40 +52,104 @@ export const CareerDashboard = () => {
         saves: 0
     } : stats;
     const actualTrophies = isFreeAgent ? [] : trophies;
+    const avgRating = isFreeAgent ? 0 : (6.5 + (Math.random() * 2));
+
+    // Calculate Love and Fame
+    // Did they change clubs? (Compare current team with team from last season history)
+    let changedClubs = false;
+    if (player.statsHistory.length > 0) {
+       changedClubs = player.statsHistory[player.statsHistory.length - 1].teamName !== player.currentTeam?.name;
+    }
+
+    const { love, fame, legacy } = calculateLoveAndFame(
+       player.love,
+       player.fame,
+       player.legacy,
+       player.age,
+       player.overallRating,
+       player.currentTeam?.elo_rating || 50,
+       changedClubs,
+       {
+           apps: actualApps,
+           goals: actualStats.goals || 0,
+           assists: actualStats.assists || 0,
+           cleanSheets: actualStats.cleanSheets || 0,
+           saves: actualStats.saves || 0
+       },
+       actualTrophies.length
+    );
 
     const seasonStats: SeasonStats = {
       year: 2024 + player.age - 16,
       teamName: player.currentTeam?.name || 'Free Agent',
       appearances: actualApps,
       ...actualStats,
-      averageRating: isFreeAgent ? 0 : (6.5 + (Math.random() * 2)),
+      averageRating: avgRating,
       playerRating: player.overallRating,
       trophiesWon: actualTrophies,
-      wageEarned: actualWageEarned
+      wageEarned: actualWageEarned,
+      love,
+      fame
     };
 
     addSeasonStats(seasonStats);
 
     const ratingChange = calculateYearlyProgression(player.age, player.overallRating, player.peakRating, formOffset);
+    const newAge = player.age + 1;
+    const newRating = player.overallRating + ratingChange;
+
+    // Auto-save player state with new fame/love
+    updatePlayer({
+      age: newAge,
+      overallRating: newRating,
+      love,
+      fame,
+      legacy
+    });
 
     await new Promise(r => setTimeout(r, 800));
 
-    updatePlayer({
-      age: player.age + 1,
-      overallRating: player.overallRating + ratingChange
-    });
+    // Generate transfer offers synchronously here
+    const allTeams = await fetchTeams();
+    const offers = generateTransferOffers(newRating, newAge, player.currentTeam, allTeams, avgRating, love);
 
     setIsSimulating(false);
 
-    if (player.age + 1 >= 40 && player.position !== 'GK') {
-        retirePlayer();
+    // Auto-renew if no external offers
+    if (offers.externalOffers.length === 0) {
+        if (offers.renewalOffer) {
+            // Auto renew
+            updatePlayer({
+               currentTeam: offers.renewalOffer.team,
+               weeklyWage: offers.renewalOffer.wageOffer
+            });
+            // Check retirement after auto renew
+            if (newAge >= 40 && player.position !== 'GK') {
+                retirePlayer("Age Limit Reached");
+            } else if (newAge >= 44 && player.position === 'GK') {
+                retirePlayer("Age Limit Reached");
+            }
+            return;
+        } else if (offers.releaseReason) {
+            // Released and no external offers. Check if age > 33 to force retirement
+            if (newAge > 33) {
+                retirePlayer("Forced retirement: Unsigned and declining.");
+                return;
+            }
+        }
+    }
+
+    // Still check hard cap limits if they do have offers
+    if (newAge >= 40 && player.position !== 'GK') {
+        retirePlayer("Age Limit Reached");
         return;
     }
-    if (player.age + 1 >= 44 && player.position === 'GK') {
-        retirePlayer();
+    if (newAge >= 44 && player.position === 'GK') {
+        retirePlayer("Age Limit Reached");
         return;
     }
 
+    setTransferResult(offers);
     setShowTransfers(true);
   };
 
@@ -112,7 +184,7 @@ export const CareerDashboard = () => {
 
   return (
     <div className="max-w-6xl mx-auto mt-4 p-4 lg:grid lg:grid-cols-12 gap-6 items-start">
-      {showTransfers && <TransferOffersModal onComplete={() => setShowTransfers(false)} />}
+      {showTransfers && transferResult && <TransferOffersModal result={transferResult} onComplete={() => setShowTransfers(false)} />}
 
       {/* Left Column - Profile & Actions */}
       <div className="lg:col-span-4 space-y-6">
@@ -136,6 +208,10 @@ export const CareerDashboard = () => {
                         <h3 className="text-gray-400 font-semibold flex items-center gap-2 mt-1">
                             {player.currentTeam?.name}
                         </h3>
+                        <div className="flex gap-4 mt-2">
+                           <span className="text-xs font-bold flex items-center gap-1 text-pink-400"><Heart size={12} fill="currentColor"/> {player.love}% Love</span>
+                           <span className="text-xs font-bold flex items-center gap-1 text-yellow-400"><Star size={12} fill="currentColor"/> {player.fame}% Fame</span>
+                        </div>
                     </div>
                     <div className="text-right">
                         <span className="text-xs text-gray-500 font-bold block mb-1 uppercase tracking-widest">Age</span>
@@ -226,11 +302,12 @@ export const CareerDashboard = () => {
             {/* Header row */}
             <div className="grid grid-cols-12 gap-2 p-3 text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-800 bg-gray-900/50">
                 <div className="col-span-1 text-center">Age</div>
-                <div className="col-span-6 sm:col-span-5 pl-2">Club</div>
+                <div className="col-span-4 sm:col-span-3 pl-2">Club</div>
                 <div className="col-span-1 text-center">OVR</div>
                 <div className="col-span-1 text-center" title="Played Matches">Apps</div>
                 <div className="col-span-1 text-center" title={isGK ? "Clean Sheets" : "Goals"}>{isGK ? 'CS' : 'GLS'}</div>
                 <div className="col-span-1 text-center" title={isGK ? "Goals Conceded" : "Assists"}>{isGK ? 'GC' : 'AST'}</div>
+                <div className="col-span-2 text-right pr-2">Love/Fame</div>
             </div>
 
             {/* Rows */}
@@ -243,7 +320,7 @@ export const CareerDashboard = () => {
                         return (
                             <div key={idx} className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-gray-800/50 transition-colors text-sm text-gray-300">
                                 <div className="col-span-1 text-center font-bold text-indigo-400">{ageDuringSeason}</div>
-                                <div className="col-span-6 sm:col-span-5 pl-2 flex items-center gap-2 truncate">
+                                <div className="col-span-4 sm:col-span-3 pl-2 flex items-center gap-2 truncate">
                                     <span className="font-semibold text-gray-100 truncate">{stat.teamName}</span>
                                     {stat.trophiesWon.length > 0 && (
                                         <div className="flex shrink-0">
@@ -257,6 +334,10 @@ export const CareerDashboard = () => {
                                 <div className="col-span-1 text-center font-mono">{stat.appearances}</div>
                                 <div className="col-span-1 text-center font-mono text-gray-100">{isGK ? stat.cleanSheets : stat.goals}</div>
                                 <div className="col-span-1 text-center font-mono text-gray-100">{isGK ? stat.goalsConceded : stat.assists}</div>
+                                <div className="col-span-2 text-right pr-2 flex items-center justify-end gap-2 font-mono text-[10px] text-gray-400">
+                                   <span className="text-pink-400/80"><Heart size={10} className="inline"/>{stat.love}</span>
+                                   <span className="text-yellow-400/80"><Star size={10} className="inline"/>{stat.fame}</span>
+                                </div>
                             </div>
                         )
                     })

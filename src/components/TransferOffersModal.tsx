@@ -1,39 +1,14 @@
-import { useState, useEffect } from 'react';
 import { useCareerStore } from '../store/careerStore';
-import { generateTransferOffers, type TransferOffer, type TransferWindowResult } from '../lib/engine';
-import { fetchTeams } from '../lib/supabase';
+import { type TransferOffer, type TransferWindowResult } from '../lib/engine';
 import { Euro, ArrowRight, RefreshCcw, AlertTriangle } from 'lucide-react';
 
 interface Props {
   onComplete: () => void;
+  result: TransferWindowResult;
 }
 
-export const TransferOffersModal = ({ onComplete }: Props) => {
-  const { player, updatePlayer } = useCareerStore();
-  const [result, setResult] = useState<TransferWindowResult | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadOffers = async () => {
-      if (!player) return;
-      const allTeams = await fetchTeams();
-
-      const lastSeason = player.statsHistory.length > 0
-          ? player.statsHistory[player.statsHistory.length - 1]
-          : null;
-
-      const generated = generateTransferOffers(
-        player.overallRating,
-        player.age,
-        player.currentTeam,
-        allTeams,
-        lastSeason?.averageRating || 6.5
-      );
-      setResult(generated);
-      setLoading(false);
-    };
-    loadOffers();
-  }, [player]);
+export const TransferOffersModal = ({ onComplete, result }: Props) => {
+  const { updatePlayer } = useCareerStore();
 
   const handleAccept = (offer: TransferOffer) => {
     updatePlayer({
@@ -55,13 +30,7 @@ export const TransferOffersModal = ({ onComplete }: Props) => {
       onComplete();
   }
 
-  if (loading || !result) {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white dark:bg-gray-800 p-8 rounded-lg text-gray-900 dark:text-gray-100">Loading offers...</div>
-      </div>
-    );
-  }
+
 
   const { externalOffers, renewalOffer, releaseReason } = result;
 

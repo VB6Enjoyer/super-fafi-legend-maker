@@ -21,6 +21,8 @@ export interface SeasonStats {
   averageRating: number;
   playerRating: number;
   trophiesWon: string[];
+  love: number;
+  fame: number;
   wageEarned: number;
 }
 
@@ -38,14 +40,18 @@ export interface PlayerState {
   careerEarnings: number;
   weeklyWage: number;
   isRetired: boolean;
+  retireReason?: string;
+  love: number;
+  fame: number;
+  legacy: number;
 }
 
 interface CareerStore {
   player: PlayerState | null;
-  createPlayer: (playerData: Omit<PlayerState, 'statsHistory' | 'trophies' | 'careerEarnings' | 'weeklyWage' | 'isRetired' | 'peakRating'>) => void;
+  createPlayer: (playerData: Omit<PlayerState, 'statsHistory' | 'trophies' | 'careerEarnings' | 'weeklyWage' | 'isRetired' | 'peakRating' | 'love' | 'fame' | 'legacy'>) => void;
   updatePlayer: (updates: Partial<PlayerState>) => void;
   addSeasonStats: (stats: SeasonStats) => void;
-  retirePlayer: () => void;
+  retirePlayer: (reason?: string) => void;
   resetCareer: () => void;
 }
 
@@ -61,6 +67,9 @@ export const useCareerStore = create<CareerStore>((set) => ({
       careerEarnings: 0,
       weeklyWage: 0, // start with 0 until signed
       isRetired: false,
+      love: 10,
+      fame: 10,
+      legacy: 0
     }
   }),
 
@@ -83,8 +92,8 @@ export const useCareerStore = create<CareerStore>((set) => ({
     } : null
   })),
 
-  retirePlayer: () => set((state) => ({
-    player: state.player ? { ...state.player, isRetired: true } : null
+  retirePlayer: (reason?: string) => set((state) => ({
+    player: state.player ? { ...state.player, isRetired: true, retireReason: reason } : null
   })),
 
   resetCareer: () => set({ player: null })
