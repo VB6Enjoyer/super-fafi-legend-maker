@@ -210,7 +210,7 @@ export const CareerDashboard = () => {
                         </h3>
                         <div className="flex gap-4 mt-2">
                            <span className="text-xs font-bold flex items-center gap-1 text-pink-400"><Heart size={12} fill="currentColor"/> {player.love}% Love</span>
-                           <span className="text-xs font-bold flex items-center gap-1 text-yellow-400"><Star size={12} fill="currentColor"/> {player.fame}% Fame</span>
+                           <span className="text-xs font-bold flex items-center gap-1 text-yellow-400"><Star size={12} fill="currentColor"/> {player.fame.toLocaleString()} Fame</span>
                         </div>
                     </div>
                     <div className="text-right">
@@ -334,9 +334,9 @@ export const CareerDashboard = () => {
                                 <div className="col-span-1 text-center font-mono">{stat.appearances}</div>
                                 <div className="col-span-1 text-center font-mono text-gray-100">{isGK ? stat.cleanSheets : stat.goals}</div>
                                 <div className="col-span-1 text-center font-mono text-gray-100">{isGK ? stat.goalsConceded : stat.assists}</div>
-                                <div className="col-span-2 text-right pr-2 flex items-center justify-end gap-2 font-mono text-[10px] text-gray-400">
-                                   <span className="text-pink-400/80"><Heart size={10} className="inline"/>{stat.love}</span>
-                                   <span className="text-yellow-400/80"><Star size={10} className="inline"/>{stat.fame}</span>
+                                <div className="col-span-2 text-right pr-2 flex items-center justify-end gap-2 font-mono text-xs text-gray-400">
+                                   <span className="text-pink-400/80 flex items-center gap-0.5"><Heart size={12} className="inline"/>{stat.love}</span>
+                                   <span className="text-yellow-400/80 flex items-center gap-0.5"><Star size={12} className="inline"/>{stat.fame.toLocaleString()}</span>
                                 </div>
                             </div>
                         )

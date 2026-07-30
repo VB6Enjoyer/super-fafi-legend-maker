@@ -2,8 +2,8 @@
 
 export interface FameAndLoveStats {
   love: number; // 0-100
-  fame: number; // 0-100
-  legacy: number; // hidden multiplier 0-100
+  fame: number; // Unbounded integer, 5000 is roughly CR7 peak
+  legacy: number; // Max fame reached at a high elo club
 }
 
 export function calculateLoveAndFame(
@@ -28,9 +28,8 @@ export function calculateLoveAndFame(
   }
 
   // --- LOVE CALCULATION ---
-  // Love goes up based on playing, scoring/saving, and winning titles.
   const performanceScore = (seasonPerformance.goals * 2) + (seasonPerformance.assists * 1) + (seasonPerformance.cleanSheets * 3) + (seasonPerformance.saves * 0.1);
-  const playRatio = seasonPerformance.apps / 38; // rough ratio
+  const playRatio = seasonPerformance.apps / 38;
 
   let loveIncrease = 0;
   if (playRatio > 0.5) loveIncrease += 5;
@@ -38,40 +37,47 @@ export function calculateLoveAndFame(
   if (performanceScore > 40) loveIncrease += 10;
   loveIncrease += (trophiesWonCount * 15);
 
-  if (playRatio < 0.2) loveIncrease -= 5; // Fans forget you if you don't play
+  if (playRatio < 0.2) loveIncrease -= 5;
 
   love = Math.max(0, Math.min(100, love + loveIncrease));
 
   // --- FAME & LEGACY CALCULATION ---
-  // Fame depends heavily on the club's stature (elo), the player's OVR, and titles.
 
-  // Calculate a "target fame" based on current situation
-  let targetFame = (overallRating * 0.6) + (teamElo * 0.4);
-  targetFame += (trophiesWonCount * 5);
-  if (performanceScore > 30) targetFame += 5;
+  // Base target fame calculation using a steep cubic curve
+  // A 99 OVR player at a 99 Elo club will have a base factor of 1, * 4500 = 4500 base target fame.
+  // A 70 OVR player at a 70 Elo club will have a base factor of ~0.125, * 4500 = ~562.
+  const powerFactor = Math.pow((overallRating * teamElo) / (99 * 99), 3);
+  let targetFame = powerFactor * 4500;
 
-  // Legacy builds up when hitting very high fame at big clubs
-  if (fame > 80 && teamElo > 85) {
-      legacy += (fame - 80) * 0.5;
-      legacy = Math.min(100, legacy);
+  // Scale down heavily if not playing
+  if (playRatio < 0.2) {
+      targetFame *= 0.5;
   }
 
-  // Move current fame towards target fame
+  // Performance bonuses directly add to target fame
+  targetFame += (performanceScore * 2);
+  targetFame += (trophiesWonCount * 250 * (teamElo / 99)); // Winning at big clubs matters more
+
+  // If player is a superstar, legacy builds up as the max fame ever reached at a top club.
+  if (teamElo > 85 && fame > legacy) {
+      legacy = fame;
+  }
+
   let fameDiff = targetFame - fame;
 
   if (fameDiff < 0) {
-      // Losing fame (e.g. moved to a smaller club or getting old)
-      // Legacy protects against rapid fame loss
-      const protection = 1 - (legacy / 200); // legacy=100 means only lose half as fast
-      fameDiff *= protection;
+      // Losing fame. The higher the legacy, the slower the fame decays.
+      // E.g., a legacy of 5000 means you only lose fame at 20% of the normal speed.
+      const decayResistance = Math.min(0.8, legacy / 6000);
+      fameDiff *= (1 - decayResistance);
   }
 
-  // Smooth the transition (e.g. takes a few seasons to fully adjust)
-  fame = Math.max(0, Math.min(100, fame + (fameDiff * 0.4)));
+  // Smooth the transition so fame grows/shrinks over a few seasons
+  fame = fame + (fameDiff * 0.35);
 
   return {
       love: Math.round(love),
-      fame: Math.round(fame),
+      fame: Math.round(Math.max(0, fame)),
       legacy
   };
 }
