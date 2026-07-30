@@ -19,6 +19,7 @@ export interface SeasonStats {
   goalsConceded?: number;
   saves?: number;
   averageRating: number;
+  playerRating: number;
   trophiesWon: string[];
   wageEarned: number;
 }

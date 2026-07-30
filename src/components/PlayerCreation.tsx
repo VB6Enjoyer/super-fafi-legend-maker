@@ -2,12 +2,15 @@ import React, { useState } from 'react';
 import { useCareerStore } from '../store/careerStore';
 import type { Position } from '../lib/engine';
 import { COUNTRIES } from '../lib/countries';
+import { Search } from 'lucide-react';
 
 export const PlayerCreation = () => {
   const [name, setName] = useState('');
   const [nationality, setNationality] = useState('England');
   const [position, setPosition] = useState<Position>('ST');
   const [dominantFoot, setDominantFoot] = useState<'Left' | 'Right'>('Right');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const createPlayer = useCareerStore(state => state.createPlayer);
 
@@ -72,19 +75,51 @@ export const PlayerCreation = () => {
                 />
                 </div>
 
-                <div>
-                <label htmlFor="nat-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nationality</label>
-                <select
-                    id="nat-input"
-                    required
-                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm p-2 border focus:ring-indigo-500 focus:border-indigo-500"
-                    value={nationality}
-                    onChange={(e) => setNationality(e.target.value)}
+                <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nationality</label>
+
+                <div
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white shadow-sm p-2 border cursor-pointer flex justify-between items-center"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 >
-                    {COUNTRIES.map(c => (
-                        <option key={c.code} value={c.name}>{c.flag} {c.name} ({c.code})</option>
-                    ))}
-                </select>
+                    <span>
+                        {COUNTRIES.find(c => c.name === nationality)?.flag} {nationality}
+                    </span>
+                    <span className="text-gray-400">▼</span>
+                </div>
+
+                {isDropdownOpen && (
+                    <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-hidden flex flex-col">
+                        <div className="p-2 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+                            <Search size={16} className="text-gray-400" />
+                            <input
+                                type="text"
+                                autoFocus
+                                placeholder="Search country..."
+                                className="w-full bg-transparent outline-none text-gray-900 dark:text-white"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                        <div className="overflow-y-auto">
+                            {COUNTRIES.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.code.toLowerCase().includes(searchQuery.toLowerCase())).map(c => (
+                                <div
+                                    key={c.code}
+                                    className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 cursor-pointer text-gray-900 dark:text-white flex items-center gap-2"
+                                    onClick={() => {
+                                        setNationality(c.name);
+                                        setIsDropdownOpen(false);
+                                        setSearchQuery('');
+                                    }}
+                                >
+                                    <span>{c.flag}</span>
+                                    <span>{c.name} <span className="text-xs text-gray-400">({c.code})</span></span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
                 </div>
 
                 <div>
