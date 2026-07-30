@@ -9,6 +9,16 @@ export interface Team {
   league_tier?: number;
 }
 
+export interface NationalStats {
+  appearances: number;
+  goals: number;
+  assists: number;
+  cleanSheets: number;
+  goalsConceded: number;
+  saves: number;
+  love: number;
+}
+
 export interface SeasonStats {
   year: number;
   teamName: string;
@@ -36,6 +46,7 @@ export interface PlayerState {
   peakRating: number;
   currentTeam: Team | null;
   statsHistory: SeasonStats[];
+  nationalStats: NationalStats;
   trophies: string[];
   careerEarnings: number;
   weeklyWage: number;
@@ -48,7 +59,7 @@ export interface PlayerState {
 
 interface CareerStore {
   player: PlayerState | null;
-  createPlayer: (playerData: Omit<PlayerState, 'statsHistory' | 'trophies' | 'careerEarnings' | 'weeklyWage' | 'isRetired' | 'peakRating' | 'love' | 'fame' | 'legacy'>) => void;
+  createPlayer: (playerData: Omit<PlayerState, 'statsHistory' | 'nationalStats' | 'trophies' | 'careerEarnings' | 'weeklyWage' | 'isRetired' | 'peakRating' | 'love' | 'fame' | 'legacy'>) => void;
   updatePlayer: (updates: Partial<PlayerState>) => void;
   addSeasonStats: (stats: SeasonStats) => void;
   retirePlayer: (reason?: string) => void;
@@ -63,6 +74,15 @@ export const useCareerStore = create<CareerStore>((set) => ({
       ...playerData,
       peakRating: playerData.overallRating,
       statsHistory: [],
+      nationalStats: {
+        appearances: 0,
+        goals: 0,
+        assists: 0,
+        cleanSheets: 0,
+        goalsConceded: 0,
+        saves: 0,
+        love: 10
+      },
       trophies: [],
       careerEarnings: 0,
       weeklyWage: 0, // start with 0 until signed

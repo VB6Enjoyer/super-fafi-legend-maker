@@ -361,3 +361,48 @@ export function generateTransferOffers(
         releaseReason
     };
 }
+
+export function simulateNationalTeam(
+  playerRating: number,
+  ntElo: number,
+  position: Position
+): { calledUp: boolean; apps: number; stats: ExpectedOutput; newLove: number } {
+  // Call up probability based on gap between OVR and NT Elo
+  // If player is much worse than the NT elo, rarely called up.
+  // If player is better or equal, almost certainly called up.
+  const gap = playerRating - ntElo;
+  let callUpChance = 0.5 + (gap * 0.05);
+
+  if (gap > 5) callUpChance = 0.95;
+  if (gap < -15) callUpChance = 0.05;
+  if (gap < -25) callUpChance = 0.0;
+
+  const calledUp = Math.random() < callUpChance;
+
+  if (!calledUp) {
+      return { calledUp: false, apps: 0, stats: {}, newLove: 0 };
+  }
+
+  // Max ~15 NT games a year. High OVR plays more.
+  const maxApps = Math.floor(Math.random() * 5) + 10; // 10 to 14
+  const playRatio = Math.min(1, Math.max(0.1, 0.5 + (gap * 0.05)));
+  const apps = Math.round(maxApps * playRatio);
+
+  if (apps === 0) {
+      return { calledUp: true, apps: 0, stats: {}, newLove: 0 };
+  }
+
+  // Generate stats (using existing formula but adapted for NT)
+  const stats = simulateSeasonStats(position, playerRating, ntElo, ntElo, apps, maxApps);
+
+  // Calculate Love change roughly (just based on apps and scoring)
+  let loveIncrease = 1;
+  const isGK = position === 'GK';
+  if (isGK) {
+      if ((stats.cleanSheets || 0) > 3) loveIncrease += 2;
+  } else {
+      if ((stats.goals || 0) + (stats.assists || 0) > 3) loveIncrease += 2;
+  }
+
+  return { calledUp: true, apps, stats, newLove: loveIncrease };
+}

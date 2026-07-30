@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useCareerStore, type SeasonStats } from '../store/careerStore';
-import { calculateAppearances, simulateSeasonStats, calculateYearlyProgression, calculateLoveAndFame, generateTransferOffers, type TransferWindowResult } from '../lib/engine';
+import { calculateAppearances, simulateSeasonStats, calculateYearlyProgression, calculateLoveAndFame, generateTransferOffers, simulateNationalTeam, type TransferWindowResult } from '../lib/engine';
 import { Trophy, Settings, Heart, Star } from 'lucide-react';
 import { TransferOffersModal } from './TransferOffersModal';
 import { COUNTRIES } from '../lib/countries';
@@ -54,6 +54,24 @@ export const CareerDashboard = () => {
     const actualTrophies = isFreeAgent ? [] : trophies;
     const avgRating = isFreeAgent ? 0 : (6.5 + (Math.random() * 2));
 
+    // National Team Logic
+    const ntData = COUNTRIES.find(c => c.name === player.nationality);
+    const ntElo = ntData?.elo || 50;
+    const ntSim = simulateNationalTeam(player.overallRating, ntElo, player.position);
+
+    let updatedNationalStats = player.nationalStats;
+    if (ntSim.calledUp && ntSim.apps > 0) {
+        updatedNationalStats = {
+            appearances: player.nationalStats.appearances + ntSim.apps,
+            goals: player.nationalStats.goals + (ntSim.stats.goals || 0),
+            assists: player.nationalStats.assists + (ntSim.stats.assists || 0),
+            cleanSheets: player.nationalStats.cleanSheets + (ntSim.stats.cleanSheets || 0),
+            goalsConceded: player.nationalStats.goalsConceded + (ntSim.stats.goalsConceded || 0),
+            saves: player.nationalStats.saves + (ntSim.stats.saves || 0),
+            love: Math.min(100, player.nationalStats.love + ntSim.newLove)
+        };
+    }
+
     // Calculate Love and Fame
     // Did they change clubs? (Compare current team with team from last season history)
     let changedClubs = false;
@@ -104,7 +122,8 @@ export const CareerDashboard = () => {
       overallRating: newRating,
       love,
       fame,
-      legacy
+      legacy,
+      nationalStats: updatedNationalStats
     });
 
     await new Promise(r => setTimeout(r, 800));
@@ -312,6 +331,26 @@ export const CareerDashboard = () => {
 
             {/* Rows */}
             <div className="divide-y divide-gray-800 max-h-[650px] overflow-y-auto">
+                {/* Fixed National Team Row */}
+                {player.nationalStats.appearances > 0 && (
+                    <div className="grid grid-cols-12 gap-2 p-3 items-center bg-gray-800/80 border-b-2 border-indigo-500/30 text-sm text-gray-200">
+                        <div className="col-span-1 text-center font-bold text-gray-500">-</div>
+                        <div className="col-span-4 sm:col-span-3 pl-2 flex items-center gap-2 truncate">
+                            <span className="text-lg">{COUNTRIES.find(c => c.name === player.nationality)?.flag}</span>
+                            <span className="font-bold text-white truncate">{player.nationality}</span>
+                        </div>
+                        <div className="col-span-1 flex justify-center">
+                            <span className="px-2 py-0.5 rounded text-xs font-bold bg-gray-700 text-gray-400">NT</span>
+                        </div>
+                        <div className="col-span-1 text-center font-mono font-bold text-indigo-300">{player.nationalStats.appearances}</div>
+                        <div className="col-span-1 text-center font-mono font-bold text-white">{isGK ? player.nationalStats.cleanSheets : player.nationalStats.goals}</div>
+                        <div className="col-span-1 text-center font-mono font-bold text-white">{isGK ? player.nationalStats.goalsConceded : player.nationalStats.assists}</div>
+                        <div className="col-span-2 text-right pr-2 flex items-center justify-end gap-2 font-mono text-xs text-gray-300">
+                            <span className="text-pink-400 flex items-center gap-0.5"><Heart size={12} className="inline" fill="currentColor"/>{player.nationalStats.love}%</span>
+                        </div>
+                    </div>
+                )}
+
                 {player.statsHistory.length === 0 ? (
                      <div className="p-8 text-center text-gray-500 italic">No professional appearances yet. Sign your first contract to begin.</div>
                 ) : (
